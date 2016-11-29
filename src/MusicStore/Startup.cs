@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,16 +38,11 @@ namespace MusicStore
             services.Configure<AppSettings>(Configuration.GetSection("AppSettings"));
 
             // Add EF services to the services container
-            if (_platform.UseInMemoryStore)
-            {
-                services.AddDbContext<MusicStoreContext>(options =>
-                    options.UseInMemoryDatabase());
-            }
-            else
-            {
-                services.AddDbContext<MusicStoreContext>(options =>
-                    options.UseSqlServer(Configuration[StoreConfig.ConnectionStringKey.Replace("__", ":")]));
-            }
+            bool useInMemoryStore = _platform.UseInMemoryStore;
+            services.AddDbContext<MusicStoreContext>(options =>
+                (useInMemoryStore ? options.UseInMemoryDatabase()
+                                  : options.UseSqlServer(Configuration[StoreConfig.ConnectionStringKey.Replace("__", ":")]))
+                .ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.CompilingQueryModel)));
 
             // Add Identity services to the services container
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
